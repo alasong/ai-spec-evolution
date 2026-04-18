@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "ai-spec-evolution"
+version = "0.1.0"
+description = "Automatically discover, verify, and propose AI coding best practices from social media"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.25",
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "dashscope>=1.14",
+    "python-dotenv>=1.0",
+    "tiktoken>=0.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.3"]
+
+[project.scripts]
+spec-evolve = "src.cli:main"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

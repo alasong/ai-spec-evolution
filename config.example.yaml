@@ -1,0 +1,20 @@
+# Example configuration — copy to config.yaml and fill in values
+twitter:
+  bearer_token: ""  # or set TWITTER_BEARER_TOKEN env var
+  accounts_file: "data/accounts.yaml"
+  fetch_limit: 20
+  fetch_since_days: 7
+
+dashscope:
+  api_key: ""  # or set DASHSCOPE_PRO env var
+  filter_model: "qwen-turbo"
+  analysis_model: "qwen-plus"
+  verification_model: "qwen-max"
+
+github:
+  token: ""  # or set GITHUB_TOKEN env var
+  target_repo: "alasong/ai-coding-standards"
+  spec_docs_dir: "ai-coding-v5.4"
+
+data_dir: "data"
+run_mode: "full"  # full | filter-only | verify-only
