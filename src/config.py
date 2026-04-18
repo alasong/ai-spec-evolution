@@ -17,9 +17,10 @@ class TwitterConfig:
 @dataclass
 class DashScopeConfig:
     api_key: str = ""
-    filter_model: str = "qwen-turbo"
-    analysis_model: str = "qwen-plus"
-    verification_model: str = "qwen-max"
+    # Coding Plan models: qwen3.5-plus, glm-5, kimi-k2.5
+    filter_model: str = "qwen3.5-plus"
+    analysis_model: str = "qwen3.5-plus"
+    verification_model: str = "glm-5"
 
 @dataclass
 class GitHubConfig:

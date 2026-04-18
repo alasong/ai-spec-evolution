@@ -30,9 +30,11 @@ class DashScopeClient:
     Auto-detects endpoint based on API key prefix:
     - sk-sp-* → Coding Plan endpoint (coding.dashscope.aliyuncs.com)
     - sk-*    → Standard DashScope endpoint (dashscope.aliyuncs.com)
+
+    Coding Plan supported models: qwen3.5-plus, glm-5, kimi-k2.5
     """
 
-    def __init__(self, api_key: str, default_model: str = "qwen-plus"):
+    def __init__(self, api_key: str, default_model: str = "qwen3.5-plus"):
         self.api_key = api_key
         self.default_model = default_model
         # Auto-select endpoint based on key prefix
