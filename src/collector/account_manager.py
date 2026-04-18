@@ -92,7 +92,7 @@ Respond with JSON only:
                         {"role": "system", "content": "Evaluate AI coding content quality. JSON only."},
                         {"role": "user", "content": prompt},
                     ],
-                    model="qwen-turbo",
+                    model="qwen3.5-plus",
                     temperature=0.0,
                 )
                 new_score = result.get("quality_score", account.trust_score)

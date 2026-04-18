@@ -25,12 +25,13 @@ def main():
     sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("collect", help="Fetch tweets from curated accounts")
+    sub.add_parser("discover", help="Run Discovery Layer — find new AI coding voices via keyword search")
     sub.add_parser("filter", help="LLM-classify collected tweets")
     sub.add_parser("dedup", help="Remove duplicates against existing issues/specs")
     sub.add_parser("verify", help="Run logic + project verification")
     sub.add_parser("issue", help="Create GitHub issues for verified practices")
     sub.add_parser("accounts", help="Manage curated Twitter accounts")
-    sub.add_parser("run", help="Run full pipeline")
+    sub.add_parser("run", help="Run full pipeline (collection + discovery)")
 
     args = parser.parse_args()
 
@@ -47,13 +48,15 @@ def main():
 
     if args.command == "run":
         run_pipeline(config)
+    elif args.command == "discover":
+        run_discovery(config)
     else:
         logger.info("Command '%s' — run with 'run' for full pipeline", args.command)
         sys.exit(0)
 
 
 def run_pipeline(config):
-    """Run the full pipeline: collect -> filter -> dedup -> verify -> issue."""
+    """Run the full collection pipeline: collect -> filter -> dedup -> verify -> issue."""
     from src.collector.twitter import TwitterCollector
     from src.processor.filter import PracticeFilter, PracticeExtractor, save_practices
     from src.processor.dedup import DedupEngine
@@ -62,7 +65,6 @@ def run_pipeline(config):
     from src.generator.issue import IssueGenerator
     from src.llm.dashscope import DashScopeClient
 
-    # ─── Initialize components ────────────────────────────────────────
     llm_filter = DashScopeClient(
         api_key=config.pipeline.dashscope.api_key,
         default_model=config.pipeline.dashscope.filter_model,
@@ -90,7 +92,6 @@ def run_pipeline(config):
         bearer_token=config.pipeline.twitter.bearer_token,
         accounts_file=config.pipeline.twitter.accounts_file,
     )
-    # Use mock data if bearer token is empty (dev mode)
     if not config.pipeline.twitter.bearer_token:
         logger.info("No Twitter bearer token — using mock data")
         tweets = TwitterCollector.fetch_mock()
@@ -137,15 +138,11 @@ def run_pipeline(config):
         logic_result = logic_validator.verify(p)
         project_result = project_verifier.verify(p)
 
-        # Combine verdicts
         final = combine_verdicts(logic_result, project_result)
         logic_result.final_verdict = final
 
         verified_results.append((p, logic_result))
         logger.info("  → %s", final.value)
-
-        # Save verified results
-        verified_file = data_dir / "verified" / f"{p.id}.json"
 
     # ─── Stage 5: Generate Issues ─────────────────────────────────────
     logger.info("=== Stage 5/5: Generating GitHub issues ===")
@@ -160,6 +157,45 @@ def run_pipeline(config):
     logger.info("=== Pipeline complete ===")
     logger.info("Collected: %d → Filtered: %d → Verified: %d → Issues created: %d",
                 len(tweets), len(practices), len(verified_results), created)
+
+
+def run_discovery(config):
+    """Run the Discovery Layer — find new AI coding voices via keyword search."""
+    from src.collector.discovery import DiscoveryCollector, DiscoveryAnalyzer, save_discovery_report
+    from src.collector.account_manager import AccountManager
+    from src.llm.dashscope import DashScopeClient
+
+    llm_discovery = DashScopeClient(
+        api_key=config.pipeline.dashscope.api_key,
+        default_model=config.pipeline.dashscope.filter_model,
+    )
+
+    account_mgr = AccountManager(
+        accounts_file=config.pipeline.twitter.accounts_file,
+        llm=llm_discovery,
+    )
+    analyzer = DiscoveryAnalyzer(llm_discovery, account_mgr)
+
+    run_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_path = Path(config.pipeline.data_dir) / f"discovery_{run_ts}.json"
+
+    if not config.pipeline.twitter.bearer_token:
+        logger.info("No Twitter bearer token — using mock discovery data")
+        tweets = DiscoveryCollector.search_mock()
+    else:
+        collector = DiscoveryCollector(config.pipeline.twitter.bearer_token)
+        tweets = collector.search_keywords()
+
+    candidates = analyzer.analyze(tweets)
+    promoted = analyzer.promote_candidates(candidates)
+
+    save_discovery_report(candidates, str(report_path))
+
+    logger.info("=== Discovery complete ===")
+    logger.info("Tweets found: %d → Candidates qualified: %d → Accounts promoted: %d",
+                len(tweets), len(candidates), len(promoted))
+    if promoted:
+        logger.info("Promoted: %s", ", ".join(f"@{h.handle}" for h in promoted))
 
 
 def combine_verdicts(logic: "VerificationResult", project: "VerificationResult") -> str:

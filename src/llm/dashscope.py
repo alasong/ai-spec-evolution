@@ -51,7 +51,7 @@ class DashScopeClient:
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
-            timeout=60.0,
+            timeout=httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0),
         )
 
     def chat(
